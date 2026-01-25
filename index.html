@@ -267,7 +267,7 @@
       <div class="line"> </div>
 
       <div class="line muted">Example: fl-ower mo-tion</div>
-      <div class="line muted">Type highlighted syllable(s). Finish data, then press Space for next data. Backspace allowed (not encouraged).</div>
+      <div class="line muted">Type highlighted motion(s). Finish data, then press Space for next data. Backspace allowed (not encouraged).</div>
       <div class="line muted">Tip: press <span class="kbd">Home</span> to restart the current test and reset counters.</div>
 
       <div class="entry" id="entryBox">
@@ -276,6 +276,7 @@
 
         <div class="row">
           <button id="loadBtn" type="button">Load data</button>
+          <button id="loadCodeBtn" type="button">Load code</button>
           <button id="resetBtn" type="button">Reset counters</button>
         </div>
 
@@ -404,6 +405,9 @@
 
     let testCompleted = false;
 
+    // Input mode: false = guided (hyphens are guides), true = raw code (type exactly as shown)
+    let rawInputMode = false;
+
     // Key rollover tracking
     const keysDown = new Set();
     let rolloverCount = 0;
@@ -428,6 +432,7 @@
     const promptEl = document.getElementById("prompt");
     const phraseInputEl = document.getElementById("phraseInput");
     const loadBtn = document.getElementById("loadBtn");
+    const loadCodeBtn = document.getElementById("loadCodeBtn");
     const resetBtn = document.getElementById("resetBtn");
 
     const displayEl = document.getElementById("display");
@@ -510,11 +515,21 @@
       inRollover = (keysDown.size >= 2);
     }
 
-    function parseWords(input, { resetCounters } = { resetCounters: true }) {
-      const cleaned = normalizeWordsInput(input);
+    function parseWords(input, { resetCounters, raw } = { resetCounters: true, raw: false }) {
+      rawInputMode = !!raw;
 
-      words = cleaned.length ? cleaned.split(" ") : [];
-      syllables = words.map(w => w.split("-").filter(Boolean));
+      if (rawInputMode) {
+        // Raw mode: treat input as literal tokens separated by whitespace.
+        // The user must type hyphens/punctuation exactly as displayed.
+        const tokens = (input || "").trim().split(/\s+/).filter(Boolean);
+        words = tokens;
+        syllables = words.map(w => [w]); // single "motion" per token
+      } else {
+        // Guided mode: hyphens are guides; user types letters only.
+        const cleaned = normalizeWordsInput(input);
+        words = cleaned.length ? cleaned.split(" ") : [];
+        syllables = words.map(w => w.split("-").filter(Boolean));
+      }
 
       wordIndex = 0;
       syllIndex = 0;
@@ -531,10 +546,9 @@
     }
 
     function restartCurrentTestAndResetCounters() {
-      // restart using current textarea value (matches your "current test" idea)
-      const cleaned = normalizeWordsInput(phraseInputEl.value);
+      // Restart using the current textarea value, preserving the last load mode.
       resetCountersOnly();
-      parseWords(cleaned, { resetCounters: false });
+      parseWords(phraseInputEl.value, { resetCounters: false, raw: rawInputMode });
     }
 
     function currentTargetSyllable() {
@@ -634,14 +648,22 @@
         const absIndex = start + i;
         const isActive = absIndex === wordIndex;
 
-        if (isActive) {
-          const parts = w.split("-");
-          return `<span class="word active">${parts.map((p, si2) => {
-            const cls = (si2 === syllIndex) ? "syll active" : "syll";
-            return `<span class="${cls}">${escapeHtml(p)}</span>`;
-          }).join('<span class="hyph">-</span>')}</span>`;
+        if (!isActive) {
+          return `<span class="word">${escapeHtml(w)}</span>`;
         }
-        return `<span class="word">${escapeHtml(w)}</span>`;
+
+        // Active item rendering differs by mode.
+        if (rawInputMode) {
+          // Raw mode: show the token exactly as typed (including hyphens/punctuation), highlight the whole token.
+          return `<span class="word active"><span class="syll active">${escapeHtml(w)}</span></span>`;
+        }
+
+        // Guided mode: hyphens are guides; highlight the current motion chunk.
+        const parts = w.split("-");
+        return `<span class="word active">${parts.map((p, si2) => {
+          const cls = (si2 === syllIndex) ? "syll active" : "syll";
+          return `<span class="${cls}">${escapeHtml(p)}</span>`;
+        }).join('<span class="hyph">-</span>')}</span>`;
       }).join("");
     }
 
@@ -677,7 +699,7 @@
       typedEl.textContent = buffer;
 
       const sylCount = (syllables[wordIndex] || []).length;
-      status1El.textContent = `Data ${wordIndex + 1}/${words.length} | Syllable ${Math.min(syllIndex + 1, sylCount)}/${sylCount}`;
+      status1El.textContent = `Data ${wordIndex + 1}/${words.length} | Motion ${Math.min(syllIndex + 1, sylCount)}/${sylCount}`;
 
       const tgt = currentTargetSyllable();
       const dataTgt = (syllables[wordIndex] || []).join("");
@@ -686,14 +708,21 @@
       status2El.textContent =
         wordReadyForSpace
           ? `Data complete: "${dataTgt}" — press Space to continue`
-          : `Target syllable: "${tgt}" | Progress in data: "${dataSoFar}"`;
+          : `Target motion: "${tgt}" | Progress in data: "${dataSoFar}"`;
     }
 
     // ====== Button actions ======
     loadBtn.addEventListener("click", () => {
-      // When load words are clicked all counters reset.
+      // Guided mode: hyphens are guides (not typed).
       resetCountersOnly();
-      parseWords(phraseInputEl.value, { resetCounters: false });
+      parseWords(phraseInputEl.value, { resetCounters: false, raw: false });
+      promptEl.focus();
+    });
+
+    loadCodeBtn.addEventListener("click", () => {
+      // Raw code mode: user types exactly what is shown, including hyphens/punctuation.
+      resetCountersOnly();
+      parseWords(phraseInputEl.value, { resetCounters: false, raw: true });
       promptEl.focus();
     });
 
@@ -719,9 +748,9 @@
 
       if (e.key === "Enter") {
         e.preventDefault();
-        // convenience: Enter loads data too
+        // convenience: Enter loads data too (guided)
         resetCountersOnly();
-        parseWords(phraseInputEl.value, { resetCounters: false });
+        parseWords(phraseInputEl.value, { resetCounters: false, raw: false });
         return;
       }
 
@@ -808,10 +837,9 @@
 
     // ====== Start empty + load theme ======
     loadThemeFromStorage();
-    parseWords("", { resetCounters: true });
+    parseWords("", { resetCounters: true, raw: false });
     promptEl.focus();
     render();
   </script>
 </body>
 </html>
-
