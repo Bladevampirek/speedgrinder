@@ -1,802 +1,288 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Touch Typing Home Row Speed Grinder 2.0</title>
-  <style>
-    :root{
-      --fg:#21ff21;
-      --bg:#000000;
-      --muted: rgba(33,255,33,.55);
-      --fontSize:16px;
-    }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-    body{
-      margin:0; min-height:100vh; display:grid; place-items:center;
-      background: radial-gradient(1200px 700px at 50% 20%, #1b2333 0%, #0b0c0f 55%, #050608 100%);
-      font-family: Consolas,"Lucida Console","Courier New",monospace;
-    }
+<title>Touch Typing Home Row Speed Grinder 2.0</title>
 
-    .window{
-      width:min(1100px,94vw);
-      border-radius:10px; overflow:hidden;
-      box-shadow:0 20px 60px rgba(0,0,0,.55);
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04);
-      backdrop-filter: blur(6px);
-    }
-    .titlebar{
-      height:34px; display:flex; align-items:center; justify-content:space-between;
-      padding:0 10px;
-      color:rgba(255,255,255,.85);
-      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
-      font-size:12.5px;
-      background: linear-gradient(#eef3fb,#cbd6ea);
-      border-bottom:1px solid rgba(0,0,0,.25);
-    }
-    .title-left{ display:flex; align-items:center; gap:8px; }
-    .icon{
-      width:14px; height:14px;
-      background: linear-gradient(#111,#000);
-      border:1px solid rgba(255,255,255,.25);
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.6);
-    }
-    .win-controls{ display:flex; gap:6px; }
-    .btn{
-      width:40px; height:22px; border-radius:3px;
-      background: rgba(255,255,255,.35);
-      border:1px solid rgba(0,0,0,.18);
-    }
-    .btn.close{ background: rgba(255,80,80,.55); }
+<style>
+:root{
+  --fg:#21ff21;
+  --bg:#000000;
+  --muted:rgba(33,255,33,.55);
+  --fontSize:16px;
+}
 
-    #prompt{
-      outline:none;
-      background:var(--bg);
-      color:var(--fg);
-      padding:18px 18px 14px;
-      border-top:1px solid rgba(255,255,255,.06);
-      font-size:var(--fontSize);
-    }
+body{
+  margin:0;
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  background:#0b0c0f;
+  font-family:Consolas,"Lucida Console","Courier New",monospace;
+}
 
-    .line{ white-space:pre-wrap; word-break:break-word; line-height:1.55; }
-    .muted{ color:var(--muted); }
+.window{
+  width:min(1100px,94vw);
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.08);
+}
 
-    .cursor{
-      display:inline-block; width:9px; height:1.1em; vertical-align:bottom;
-      background:var(--fg); margin-left:2px;
-      animation: blink 1s steps(1) infinite;
-    }
-    @keyframes blink{ 50%{opacity:0;} }
+/* ===== DARK TITLE BAR ===== */
+.titlebar{
+  height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 10px;
+  background:#000;
+  color:#dcdcdc;
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+  font-size:12.5px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
 
-    .syll{ opacity:.75; }
-    .syll.active{
-      opacity:1;
-      background: color-mix(in srgb, var(--fg) 12%, transparent);
-      border:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
-      border-radius:4px;
-      padding:0 3px;
-      margin:0 -1px;
-    }
-    .hyph{ color:var(--muted); opacity:.8; }
+.title-left{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 
-    .word{
-      display:inline-block;
-      padding:2px 6px;
-      border-radius:6px;
-      margin:0 6px 6px 0;
-      border:1px solid transparent;
-    }
-    .word.active{
-      border-color: color-mix(in srgb, var(--fg) 35%, transparent);
-      background: color-mix(in srgb, var(--fg) 10%, transparent);
-    }
+.icon{
+  width:14px;
+  height:14px;
+  background:#111;
+  border:1px solid rgba(255,255,255,.2);
+}
 
-    /* Progress bar (about 4 inches wide) */
-    .progress-wrap{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin:10px 0 6px;
-      font-size:calc(var(--fontSize) * 0.82);
-      color:var(--muted);
-    }
-    .progress-bar{
-      width:4in;
-      max-width:72vw;
-      height:12px;
-      border-radius:999px;
-      border:1px solid color-mix(in srgb, var(--fg) 35%, transparent);
-      background: color-mix(in srgb, var(--fg) 6%, transparent);
-      position:relative;
-      overflow:hidden;
-    }
-    .progress-fill{
-      height:100%;
-      width:0%;
-      background: color-mix(in srgb, var(--fg) 55%, transparent);
-      border-right:1px solid color-mix(in srgb, var(--fg) 45%, transparent);
-      border-radius:999px;
-      transition: width 90ms linear;
-    }
-    .progress-pct{
-      min-width:64px;
-      text-align:right;
-      color:var(--fg);
-    }
+.win-controls{
+  display:flex;
+  gap:6px;
+}
 
-    .shake{ animation: shake 120ms ease-in-out; }
-    @keyframes shake{
-      0%{transform:translateX(0);}
-      25%{transform:translateX(-6px);}
-      50%{transform:translateX(6px);}
-      75%{transform:translateX(-4px);}
-      100%{transform:translateX(0);}
-    }
+.btn{
+  width:40px;
+  height:22px;
+  border-radius:3px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.15);
+}
 
-    .status{
-      margin-top:10px; padding-top:10px;
-      border-top:1px solid color-mix(in srgb, var(--fg) 16%, transparent);
-      display:grid; grid-template-columns:1fr auto;
-      align-items:start; gap:6px 14px;
-      font-size:calc(var(--fontSize) * 0.82);
-    }
-    .status .right{
-      text-align:right;
-      white-space:nowrap;
-      display:inline-flex;
-      gap:14px;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
+.btn.close{
+  background:rgba(180,60,60,.6);
+}
 
-    .entry{
-      margin:10px 0 14px; padding:10px;
-      border:1px solid color-mix(in srgb, var(--fg) 25%, transparent);
-      background: color-mix(in srgb, var(--fg) 6%, transparent);
-      border-radius:6px;
-      font-size:calc(var(--fontSize) * 0.92);
-    }
-    .entry label{
-      display:block;
-      color:var(--muted);
-      margin-bottom:6px;
-      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
-      font-size:12.5px;
-    }
-    .entry textarea{
-      width:100%;
-      min-height:54px;
-      resize:vertical;
-      box-sizing:border-box;
-      background:var(--bg);
-      color:var(--fg);
-      border:1px solid color-mix(in srgb, var(--fg) 22%, transparent);
-      border-radius:6px;
-      padding:10px;
-      font:calc(var(--fontSize) * 0.9) Consolas,"Lucida Console","Courier New",monospace;
-      outline:none;
-    }
-    .entry .row{
-      margin-top:8px;
-      display:flex;
-      gap:8px;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
-    .entry button{
-      cursor:pointer;
-      border-radius:6px;
-      border:1px solid color-mix(in srgb, var(--fg) 25%, transparent);
-      background: color-mix(in srgb, var(--fg) 10%, transparent);
-      color:var(--fg);
-      padding:7px 10px;
-      font:12.5px "Segoe UI",Tahoma,Arial,sans-serif;
-    }
-    .entry button:hover{ background: color-mix(in srgb, var(--fg) 16%, transparent); }
+#prompt{
+  background:var(--bg);
+  color:var(--fg);
+  padding:18px;
+  font-size:var(--fontSize);
+  outline:none;
+}
 
-    .settings{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px 14px;
-      align-items:end;
-      justify-content:space-between;
-      margin:8px 0 0;
-      padding-top:10px;
-      border-top:1px solid color-mix(in srgb, var(--fg) 16%, transparent);
-    }
-    .setting{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
-      font-size:12.5px;
-      color:var(--muted);
-    }
-    .setting input[type="color"]{
-      width:36px; height:26px;
-      border-radius:6px;
-      border:1px solid rgba(255,255,255,.18);
-      background:transparent;
-      padding:0;
-      cursor:pointer;
-    }
-    .setting input[type="range"]{ width:170px; cursor:pointer; }
-    .setting .val{
-      min-width:42px; text-align:right;
-      color:var(--fg);
-      font-family:Consolas,"Lucida Console","Courier New",monospace;
-    }
+.line{ line-height:1.55; white-space:pre-wrap; }
+.muted{ color:var(--muted); }
 
-    .help{
-      margin-top:10px;
-      color:rgba(255,255,255,.65);
-      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
-      font-size:12px;
-      text-align:center;
-    }
-    .kbd{
-      display:inline-block;
-      padding:1px 6px;
-      border-radius:4px;
-      background: rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      font-family:inherit;
-    }
-  </style>
+.cursor{
+  display:inline-block;
+  width:9px;
+  height:1.1em;
+  background:var(--fg);
+  animation:blink 1s steps(1) infinite;
+}
+
+@keyframes blink{50%{opacity:0;}}
+
+.word{
+  display:inline-block;
+  padding:2px 6px;
+  margin:0 6px 6px 0;
+  border-radius:6px;
+}
+
+.word.active{
+  background:rgba(33,255,33,.12);
+  border:1px solid rgba(33,255,33,.35);
+}
+
+.syll{ opacity:.7; }
+.syll.active{
+  opacity:1;
+  background:rgba(33,255,33,.2);
+  padding:0 3px;
+  border-radius:4px;
+}
+
+.hyph{ opacity:.5; }
+
+.progress-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:10px 0;
+}
+
+.progress-bar{
+  width:4in;
+  max-width:70vw;
+  height:12px;
+  border-radius:999px;
+  border:1px solid rgba(33,255,33,.35);
+  overflow:hidden;
+}
+
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:rgba(33,255,33,.6);
+  transition:width .1s linear;
+}
+
+.status{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(33,255,33,.25);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:6px 14px;
+  font-size:.85em;
+}
+
+.shake{
+  animation:shake .12s;
+}
+
+@keyframes shake{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-6px)}
+  50%{transform:translateX(6px)}
+  75%{transform:translateX(-4px)}
+  100%{transform:translateX(0)}
+}
+
+.entry textarea{
+  width:100%;
+  min-height:50px;
+  background:#000;
+  color:var(--fg);
+  border:1px solid rgba(33,255,33,.35);
+  padding:8px;
+  font-family:inherit;
+}
+</style>
 </head>
+
 <body>
-  <div class="window">
-    <div class="titlebar">
-      <div class="title-left">
-        <div class="icon"></div>
-        <div>Touch Typing Home Row Speed Grinder 2.0</div>
-      </div>
-      <div class="win-controls">
-        <div class="btn" title="Minimize"></div>
-        <div class="btn" title="Maximize"></div>
-        <div class="btn close" title="Close"></div>
-      </div>
+<div class="window">
+  <div class="titlebar">
+    <div class="title-left">
+      <div class="icon"></div>
+      <div>Touch Typing Home Row Speed Grinder 2.0</div>
     </div>
-
-    <div id="prompt" tabindex="0" aria-label="Typing area">
-      <div class="line">Microsoft Windows [Version 6.1.7601]</div>
-      <div class="line">(c) 2009 Microsoft Corporation. All rights reserved.</div>
-      <div class="line"> </div>
-
-      <div class="line muted">Example: fl-ower mo-tion</div>
-      <div class="line muted">Type highlighted syllable(s). Finish word, then press Space for next data. Backspace allowed (not encouraged).</div>
-      <div class="line muted">Tip: press <span class="kbd">Home</span> to restart the current test and reset counters.</div>
-
-      <div class="entry" id="entryBox">
-        <label for="phraseInput">Data input</label>
-        <textarea id="phraseInput" spellcheck="false" placeholder="e.g. fl-ower mo-tion"></textarea>
-
-        <div class="row">
-          <button id="loadBtn" type="button">Load data</button>
-          <button id="resetBtn" type="button">Reset counters</button>
-        </div>
-
-        <div class="settings" aria-label="Display settings">
-          <div class="setting">
-            <span>Text</span>
-            <input id="fgPicker" type="color" value="#21ff21" aria-label="Text color" />
-          </div>
-          <div class="setting">
-            <span>Background</span>
-            <input id="bgPicker" type="color" value="#000000" aria-label="Background color" />
-          </div>
-          <div class="setting">
-            <span>Text size</span>
-            <input id="sizeSlider" type="range" min="12" max="28" step="1" value="16" aria-label="Text size" />
-            <span class="val" id="sizeVal">16px</span>
-          </div>
-          <div class="setting">
-            <button id="defaultThemeBtn" type="button">Defaults</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="progress-wrap" id="progressWrap" aria-label="Test progress">
-        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <div class="progress-pct" id="progressPct">0%</div>
-      </div>
-
-      <div class="line" id="display"></div>
-      <div class="line" id="inputLine">C:\Users\Trainee&gt; <span id="typed"></span><span class="cursor"></span></div>
-
-      <div class="status">
-        <div id="status1"></div>
-        <div class="right">
-          <div id="rollover"></div>
-          <div id="errors"></div>
-          <div id="wpm"></div>
-          <div id="acc"></div>
-        </div>
-        <div id="status2" style="grid-column: 1 / -1;"></div>
-      </div>
+    <div class="win-controls">
+      <div class="btn"></div>
+      <div class="btn"></div>
+      <div class="btn close"></div>
     </div>
   </div>
 
-  <div class="help">
-    Tip: click the “console” and type. Use <span class="kbd">Space</span> to advance data.
+  <div id="prompt" tabindex="0">
+    <div class="line">Microsoft Windows [Version 6.1.7601]</div>
+    <div class="line">(c) 2009 Microsoft Corporation. All rights reserved.</div>
+    <div class="line muted">
+      Example: fl-ower mo-tion<br>
+      Type highlighted syllable(s). Finish data, then press Space.
+    </div>
+
+    <div class="entry">
+      <textarea id="inputData" placeholder="fl-ower mo-tion"></textarea>
+      <button onclick="loadData()">Load data</button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress"></div>
+      </div>
+      <span id="progressPct">0%</span>
+    </div>
+
+    <div class="line" id="display"></div>
+    <div class="line">C:\Users\Trainee&gt; <span id="typed"></span><span class="cursor"></span></div>
+
+    <div class="status">
+      <div id="status"></div>
+      <div>
+        <span id="rollover">Rollover:0</span>
+        <span id="errors">Errors:0</span>
+        <span id="wpm">WPM:0</span>
+        <span id="acc">Acc:100%</span>
+      </div>
+      <div id="summary" style="grid-column:1/-1"></div>
+    </div>
   </div>
+</div>
 
-  <script>
-    // ====== Theme / accessibility controls ======
-    const fgPicker = document.getElementById("fgPicker");
-    const bgPicker = document.getElementById("bgPicker");
-    const sizeSlider = document.getElementById("sizeSlider");
-    const sizeVal = document.getElementById("sizeVal");
-    const defaultThemeBtn = document.getElementById("defaultThemeBtn");
+<script>
+let words=[],syll=[],wi=0,si=0,buf="";
+let errors=0,roll=0,total=0,correct=0;
+let problems={};
 
-    function hexToRgb(hex) {
-      const h = (hex || "").replace("#", "").trim();
-      if (h.length !== 6) return { r: 33, g: 255, b: 33 };
-      const n = parseInt(h, 16);
-      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+function loadData(){
+  words=document.getElementById("inputData").value.trim().split(" ");
+  syll=words.map(w=>w.split("-"));
+  wi=si=errors=roll=total=correct=0;
+  problems={};
+  render();
+}
+
+function render(){
+  if(!words.length){
+    display.innerHTML="<span class='muted'>No data loaded</span>";
+    return;
+  }
+  let out="";
+  words.slice(wi,wi+5).forEach((w,i)=>{
+    if(i===0){
+      out+=`<span class="word active">${syll[wi].map((s,j)=>`<span class="syll ${j===si?"active":""}">${s}</span>`).join("<span class='hyph'>-</span>")}</span>`;
+    }else out+=`<span class="word">${w}</span>`;
+  });
+  display.innerHTML=out;
+  typed.textContent=buf;
+  progress.style.width=`${Math.round(wi/words.length*100)}%`;
+  progressPct.textContent=Math.round(wi/words.length*100)+"%";
+  errorsEl.textContent="Errors:"+errors;
+}
+
+window.addEventListener("keydown",e=>{
+  if(!words.length)return;
+  if(e.key===" "){
+    if(buf===syll[wi][si]){
+      si++;
+      buf="";
+      if(si>=syll[wi].length){wi++;si=0;}
+    }else{
+      errors++;problems[e.key]=(problems[e.key]||0)+1;
+      buf="";
+      prompt.classList.add("shake");
     }
-
-    function applyTheme({ fg, bg, size }) {
-      document.documentElement.style.setProperty("--fg", fg);
-      document.documentElement.style.setProperty("--bg", bg);
-      document.documentElement.style.setProperty("--fontSize", `${size}px`);
-
-      const rgb = hexToRgb(fg);
-      document.documentElement.style.setProperty("--muted", `rgba(${rgb.r},${rgb.g},${rgb.b},.55)`);
-
-      sizeVal.textContent = `${size}px`;
-
-      try {
-        localStorage.setItem("tt_fg", fg);
-        localStorage.setItem("tt_bg", bg);
-        localStorage.setItem("tt_size", String(size));
-      } catch {}
-    }
-
-    function loadThemeFromStorage() {
-      try {
-        const fg = localStorage.getItem("tt_fg") || "#21ff21";
-        const bg = localStorage.getItem("tt_bg") || "#000000";
-        const size = parseInt(localStorage.getItem("tt_size") || "16", 10);
-
-        fgPicker.value = fg;
-        bgPicker.value = bg;
-        sizeSlider.value = String(Math.min(28, Math.max(12, isNaN(size) ? 16 : size)));
-
-        applyTheme({ fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10) });
-      } catch {
-        applyTheme({ fg: "#21ff21", bg: "#000000", size: 16 });
-      }
-    }
-
-    fgPicker.addEventListener("input", () => applyTheme({
-      fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10)
-    }));
-    bgPicker.addEventListener("input", () => applyTheme({
-      fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10)
-    }));
-    sizeSlider.addEventListener("input", () => applyTheme({
-      fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10)
-    }));
-    defaultThemeBtn.addEventListener("click", () => {
-      fgPicker.value = "#21ff21";
-      bgPicker.value = "#000000";
-      sizeSlider.value = "16";
-      applyTheme({ fg: "#21ff21", bg: "#000000", size: 16 });
-    });
-
-    // ====== Trainer state ======
-    let words = [];
-    let syllables = [];
-    let wordIndex = 0;
-    let syllIndex = 0;
-
-    let buffer = "";
-    let wordReadyForSpace = false;
-
-    let testCompleted = false;
-
-    const keysDown = new Set();
-    let rolloverCount = 0;
-    let inRollover = false;
-
-    let errorCount = 0;
-
-    let totalTypedChars = 0;
-    let correctTypedChars = 0;
-
-    let sessionStartMs = null;
-    let wpmTimer = null;
-    let latestWpm = 0;
-
-    let currentLoadedInput = "";
-
-    // Track "problem keys" (keys involved in mistakes)
-    const problemKeys = new Map(); // key -> count
-
-    const WINDOW_SIZE = 5;
-
-    // ====== Elements ======
-    const promptEl = document.getElementById("prompt");
-    const phraseInputEl = document.getElementById("phraseInput");
-    const loadBtn = document.getElementById("loadBtn");
-    const resetBtn = document.getElementById("resetBtn");
-
-    const displayEl = document.getElementById("display");
-    const typedEl = document.getElementById("typed");
-    const status1El = document.getElementById("status1");
-    const status2El = document.getElementById("status2");
-    const rolloverEl = document.getElementById("rollover");
-    const errorsEl = document.getElementById("errors");
-    const wpmEl = document.getElementById("wpm");
-    const accEl = document.getElementById("acc");
-
-    const progressFillEl = document.getElementById("progressFill");
-    const progressPctEl = document.getElementById("progressPct");
-    const progressBarEl = document.querySelector(".progress-bar");
-
-    // ====== Helpers ======
-    function escapeHtml(s) {
-      return s.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-    }
-
-    function jarScreen() {
-      promptEl.classList.remove("shake");
-      void promptEl.offsetWidth;
-      promptEl.classList.add("shake");
-    }
-
-    function prettyKeyName(key) {
-      if (!key) return "";
-      if (key === " ") return "Space";
-      if (key === "Backspace") return "Backspace";
-      return key.length === 1 ? key : key;
-    }
-
-    function recordProblemKey(key) {
-      const k = prettyKeyName(key);
-      if (!k) return;
-      problemKeys.set(k, (problemKeys.get(k) || 0) + 1);
-    }
-
-    function ensureSessionStarted() {
-      if (testCompleted) return;
-      if (sessionStartMs !== null) return;
-      sessionStartMs = Date.now();
-      wpmTimer = setInterval(() => {
-        if (testCompleted) return;
-        const elapsedMin = Math.max((Date.now() - sessionStartMs) / 60000, 1e-9);
-        latestWpm = Math.round((correctTypedChars / 5) / elapsedMin);
-        render();
-      }, 5000);
-    }
-
-    function stopSessionTimer() {
-      if (wpmTimer) clearInterval(wpmTimer);
-      wpmTimer = null;
-      sessionStartMs = null;
-    }
-
-    function normalizeWordsInput(input) {
-      const cleaned = (input || "").trim().replace(/\s+/g, " ");
-      if (!cleaned) return "";
-      return cleaned.split(" ").map(w => {
-        let x = w.replace(/-+/g, "-");
-        x = x.replace(/^-+/, "").replace(/-+$/, "");
-        return x;
-      }).filter(Boolean).join(" ");
-    }
-
-    function resetCountersOnly() {
-      rolloverCount = 0;
-      errorCount = 0;
-      totalTypedChars = 0;
-      correctTypedChars = 0;
-
-      problemKeys.clear();
-
-      stopSessionTimer();
-      latestWpm = 0;
-
-      testCompleted = false;
-      inRollover = (keysDown.size >= 2);
-    }
-
-    function parseWords(input, { resetCounters } = { resetCounters: true }) {
-      const cleaned = normalizeWordsInput(input);
-      currentLoadedInput = cleaned;
-
-      words = cleaned.length ? cleaned.split(" ") : [];
-      syllables = words.map(w => w.split("-").filter(Boolean));
-
-      wordIndex = 0;
-      syllIndex = 0;
-      buffer = "";
-      wordReadyForSpace = false;
-      testCompleted = false;
-
-      stopSessionTimer();
-      latestWpm = 0;
-
-      if (resetCounters) resetCountersOnly();
-
-      render();
-    }
-
-    function restartCurrentTestAndResetCounters() {
-      resetCountersOnly();
-
-      const cleaned = currentLoadedInput || "";
-      words = cleaned.length ? cleaned.split(" ") : [];
-      syllables = words.map(w => w.split("-").filter(Boolean));
-
-      wordIndex = 0;
-      syllIndex = 0;
-      buffer = "";
-      wordReadyForSpace = false;
-
-      render();
-    }
-
-    function currentTargetSyllable() {
-      return (syllables[wordIndex] && syllables[wordIndex][syllIndex]) ? syllables[wordIndex][syllIndex] : "";
-    }
-
-    function isPrintableKey(e) {
-      return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
-    }
-
-    function incErrorAndReset(problemKey = null) {
-      errorCount++;
-      if (problemKey) recordProblemKey(problemKey);
-
-      jarScreen();
-
-      buffer = "";
-      wordReadyForSpace = false;
-
-      inRollover = (keysDown.size >= 2);
-
-      render();
-    }
-
-    function advanceSyllableOrArmSpace() {
-      buffer = "";
-      const sylCount = (syllables[wordIndex] || []).length;
-      if (syllIndex < sylCount - 1) syllIndex++;
-      else wordReadyForSpace = true;
-      render();
-    }
-
-    function getProblemKeysSummary() {
-      if (problemKeys.size === 0) return "No problem keys detected.";
-      const items = Array.from(problemKeys.entries())
-        .sort((a,b) => b[1]-a[1])
-        .slice(0, 12)
-        .map(([k,v]) => `${k}(${v})`);
-      return `Problem keys: ${items.join("  ")}`;
-    }
-
-    function completeTest() {
-      testCompleted = true;
-
-      if (sessionStartMs !== null) {
-        const elapsedMin = Math.max((Date.now() - sessionStartMs) / 60000, 1e-9);
-        latestWpm = Math.round((correctTypedChars / 5) / elapsedMin);
-      }
-      stopSessionTimer();
-
-      render(true);
-    }
-
-    function advanceWord() {
-      wordIndex++;
-      syllIndex = 0;
-      buffer = "";
-      wordReadyForSpace = false;
-
-      if (wordIndex >= words.length) {
-        completeTest();
-        return;
-      }
-      render();
-    }
-
-    function accuracyPercent() {
-      if (totalTypedChars <= 0) return 100;
-      return Math.round((correctTypedChars / totalTypedChars) * 100);
-    }
-
-    function testPercentComplete() {
-      if (!words.length) return 0;
-      const completed = Math.min(wordIndex, words.length);
-      return Math.round((completed / words.length) * 100);
-    }
-
-    function renderWordsWindow() {
-      const start = wordIndex;
-      const end = Math.min(words.length, start + WINDOW_SIZE);
-      const slice = words.slice(start, end);
-
-      return slice.map((w, i) => {
-        const absIndex = start + i;
-        const isActive = absIndex === wordIndex;
-
-        if (isActive) {
-          const parts = w.split("-");
-          return `<span class="word active">${parts.map((p, si) => {
-            const cls = (si === syllIndex) ? "syll active" : "syll";
-            return `<span class="${cls}">${escapeHtml(p)}</span>`;
-          }).join('<span class="hyph">-</span>')}</span>`;
-        }
-
-        return `<span class="word">${escapeHtml(w)}</span>`;
-      }).join("");
-    }
-
-    function render(completedView = false) {
-      const pct = completedView ? 100 : testPercentComplete();
-      progressFillEl.style.width = `${pct}%`;
-      progressPctEl.textContent = `${pct}%`;
-      progressBarEl.setAttribute("aria-valuenow", String(pct));
-
-      rolloverEl.textContent = `Key Rollover: ${rolloverCount}`;
-      errorsEl.textContent = `Errors: ${errorCount}`;
-      wpmEl.textContent = `WPM: ${latestWpm}`;
-      accEl.textContent = `Accuracy: ${accuracyPercent()}%`;
-
-      if (!words.length) {
-        displayEl.innerHTML = `C:\\Typing\\Trainer&gt; <span class="muted">No data loaded. Enter some above and click "Load data".</span>`;
-        typedEl.textContent = "";
-        status1El.textContent = "";
-        status2El.textContent = "";
-        return;
-      }
-
-      if (completedView) {
-        displayEl.innerHTML = `C:\\Typing\\Trainer&gt; <span class="muted">Done.</span>`;
-        typedEl.textContent = "";
-        status1El.textContent = `Complete`;
-        status2El.textContent =
-          `✅ All data complete. WPM stopped. Press Home to restart current test.\n${getProblemKeysSummary()}`;
-        return;
-      }
-
-      displayEl.innerHTML = `C:\\Typing\\Trainer&gt; ${renderWordsWindow()}`;
-      typedEl.textContent = buffer;
-
-      const sylCount = (syllables[wordIndex] || []).length;
-      status1El.textContent = `Data ${wordIndex + 1}/${words.length} | Syllable ${Math.min(syllIndex + 1, sylCount)}/${sylCount}`;
-
-      const tgt = currentTargetSyllable();
-      const dataTgt = (syllables[wordIndex] || []).join("");
-      const dataSoFar = (syllables[wordIndex] || []).slice(0, syllIndex).join("") + buffer;
-
-      status2El.textContent =
-        wordReadyForSpace
-          ? `Data complete: "${dataTgt}" — press Space to continue`
-          : `Target syllable: "${tgt}" | Progress in data: "${dataSoFar}"`;
-    }
-
-    // ====== Button actions ======
-    loadBtn.addEventListener("click", () => {
-      resetCountersOnly();
-      parseWords(phraseInputEl.value, { resetCounters: false });
-      promptEl.focus();
-    });
-
-    resetBtn.addEventListener("click", () => {
-      resetCountersOnly();
-      render();
-      promptEl.focus();
-    });
-
-    // ====== Input handling ======
-    window.addEventListener("keydown", (e) => {
-      if (document.activeElement === phraseInputEl) return;
-      if (e.repeat) return;
-
-      keysDown.add(e.code);
-
-      if (e.key === "Home") {
-        e.preventDefault();
-        restartCurrentTestAndResetCounters();
-        return;
-      }
-
-      if (e.key === "Enter") {
-        e.preventDefault();
-        resetCountersOnly();
-        parseWords(phraseInputEl.value, { resetCounters: false });
-        return;
-      }
-
-      if (!words.length) return;
-      if (testCompleted) return;
-
-      if (e.key === "Backspace") {
-        e.preventDefault();
-        jarScreen();
-        recordProblemKey("Backspace"); // shows up in problem keys list
-        if (buffer.length > 0) {
-          buffer = buffer.slice(0, -1);
-          render();
-        }
-        return;
-      }
-
-      const blocked = ["Delete","ArrowLeft","ArrowRight","End","PageUp","PageDown"];
-      if (blocked.includes(e.key)) {
-        e.preventDefault();
-        return;
-      }
-
-      if (e.key === " " || isPrintableKey(e)) ensureSessionStarted();
-
-      if (e.key === " ") {
-        e.preventDefault();
-
-        if (keysDown.size >= 2 && !inRollover) {
-          rolloverCount++;
-          inRollover = true;
-        }
-
-        if (wordReadyForSpace) advanceWord();
-        else incErrorAndReset("Space");
-
-        return;
-      }
-
-      if (!isPrintableKey(e)) return;
-
-      totalTypedChars++;
-
-      if (wordReadyForSpace) {
-        e.preventDefault();
-        incErrorAndReset(e.key);
-        return;
-      }
-
-      const target = currentTargetSyllable();
-      buffer += e.key;
-
-      if (!target.startsWith(buffer)) {
-        e.preventDefault();
-        incErrorAndReset(e.key);
-        return;
-      }
-
-      correctTypedChars++;
-
-      if (keysDown.size >= 2 && !inRollover) {
-        rolloverCount++;
-        inRollover = true;
-      }
-
-      if (buffer === target) advanceSyllableOrArmSpace();
-      else render();
-    });
-
-    window.addEventListener("keyup", (e) => {
-      keysDown.delete(e.code);
-      if (keysDown.size < 2) inRollover = false;
-    });
-
-    promptEl.addEventListener("animationend", () => promptEl.classList.remove("shake"));
-
-    promptEl.addEventListener("mousedown", (e) => {
-      if (e.target === phraseInputEl || document.getElementById("entryBox").contains(e.target)) return;
-      promptEl.focus();
-    });
-
-    // ====== Start empty + load theme ======
-    loadThemeFromStorage();
-    parseWords("", { resetCounters: true });
-    promptEl.focus();
     render();
-  </script>
+    e.preventDefault();
+    return;
+  }
+  if(e.key.length===1){
+    total++;
+    buf+=e.key;
+    if(!syll[wi][si].startsWith(buf)){
+      errors++;problems[e.key]=(problems[e.key]||0)+1;
+      buf="";
+      prompt.classList.add("shake");
+    }else correct++;
+    render();
+  }
+});
+</script>
 </body>
 </html>
