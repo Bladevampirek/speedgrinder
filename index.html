@@ -1,0 +1,2346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Touch Typing Home Row Speed Grinder 2.0</title>
+  <style>
+    :root{
+      --fg:#21ff21;
+      --bg:#000000;
+      --muted: rgba(33,255,33,.55);
+      --fontSize:16px;
+    }
+
+    body{
+      margin:0; min-height:100vh; display:grid; place-items:center;
+      background: radial-gradient(1200px 700px at 50% 20%, #1b2333 0%, #0b0c0f 55%, #050608 100%);
+      font-family: Consolas,"Lucida Console","Courier New",monospace;
+    }
+
+    .window{
+      width:min(1100px,94vw);
+      border-radius:10px; overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      backdrop-filter: blur(6px);
+    }
+
+    /* DARK TITLE BAR */
+    .titlebar{
+      height:34px; display:flex; align-items:center; justify-content:space-between;
+      padding:0 10px;
+      color:#dcdcdc;
+      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+      font-size:12.5px;
+      background: #000;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .title-left{ display:flex; align-items:center; gap:8px; }
+    .icon{
+      width:14px; height:14px;
+      background: #111;
+      border:1px solid rgba(255,255,255,.25);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.6);
+    }
+    .win-controls{ display:flex; gap:6px; }
+    .btn{
+      width:40px; height:22px; border-radius:3px;
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.15);
+    }
+    .btn.close{ background: rgba(180,60,60,.6); }
+
+    #prompt{
+      outline:none;
+      background:var(--bg);
+      color:var(--fg);
+      padding:18px 18px 14px;
+      font-size:var(--fontSize);
+    }
+
+    .line{ white-space:pre-wrap; word-break:break-word; line-height:1.55; }
+    .muted{ color:var(--muted); }
+
+    .cursor{
+      display:inline-block; width:9px; height:1.1em; vertical-align:bottom;
+      background:var(--fg); margin-left:2px;
+      animation: blink 1s steps(1) infinite;
+    }
+    @keyframes blink{ 50%{opacity:0;} }
+
+    .syll{ opacity:.75; }
+    .syll.active{
+      opacity:1;
+      background: color-mix(in srgb, var(--fg) 12%, transparent);
+      border:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
+      border-radius:4px;
+      padding:0 3px;
+      margin:0 -1px;
+    }
+    .hyph{ color:var(--muted); opacity:.8; }
+
+    .word{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:6px;
+      margin:0 6px 6px 0;
+      border:1px solid transparent;
+    }
+    .word.active{
+      border-color: color-mix(in srgb, var(--fg) 35%, transparent);
+      background: color-mix(in srgb, var(--fg) 10%, transparent);
+    }
+
+    /* Progress bar (about 4 inches wide) */
+    .progress-wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin:10px 0 6px;
+      font-size:calc(var(--fontSize) * 0.82);
+      color:var(--muted);
+    }
+    .progress-bar{
+      width:4in;
+      max-width:72vw;
+      height:12px;
+      border-radius:999px;
+      border:1px solid color-mix(in srgb, var(--fg) 35%, transparent);
+      background: color-mix(in srgb, var(--fg) 6%, transparent);
+      position:relative;
+      overflow:hidden;
+    }
+    .progress-fill{
+      height:100%;
+      width:0%;
+      background: color-mix(in srgb, var(--fg) 55%, transparent);
+      border-right:1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+      border-radius:999px;
+      transition: width 90ms linear;
+    }
+    .progress-pct{
+      min-width:64px;
+      text-align:right;
+      color:var(--fg);
+    }
+
+    .shake{ animation: shake 120ms ease-in-out; }
+    @keyframes shake{
+      0%{transform:translateX(0);}
+      25%{transform:translateX(-6px);}
+      50%{transform:translateX(6px);}
+      75%{transform:translateX(-4px);}
+      100%{transform:translateX(0);}
+    }
+
+    .status{
+      margin-top:10px; padding-top:10px;
+      border-top:1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+      display:grid; grid-template-columns:1fr auto;
+      align-items:start; gap:6px 14px;
+      font-size:calc(var(--fontSize) * 0.82);
+    }
+    .status .right{
+      text-align:right;
+      white-space:nowrap;
+      display:inline-flex;
+      gap:14px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+
+    .entry{
+      margin:10px 0 14px; padding:10px;
+      border:1px solid color-mix(in srgb, var(--fg) 25%, transparent);
+      background: color-mix(in srgb, var(--fg) 6%, transparent);
+      border-radius:6px;
+      font-size:calc(var(--fontSize) * 0.92);
+    }
+    .entry label{
+      display:block;
+      color:var(--muted);
+      margin-bottom:6px;
+      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+      font-size:12.5px;
+    }
+    .entry textarea{
+      width:100%;
+      min-height:54px;
+      resize:vertical;
+      box-sizing:border-box;
+      background:var(--bg);
+      color:var(--fg);
+      border:1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+      border-radius:6px;
+      padding:10px;
+      font:calc(var(--fontSize) * 0.9) Consolas,"Lucida Console","Courier New",monospace;
+      outline:none;
+    }
+    .entry .row{
+      margin-top:8px;
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    .entry button{
+      cursor:pointer;
+      border-radius:6px;
+      border:1px solid color-mix(in srgb, var(--fg) 25%, transparent);
+      background: color-mix(in srgb, var(--fg) 10%, transparent);
+      color:var(--fg);
+      padding:5px 8px;
+      font:11px "Segoe UI",Tahoma,Arial,sans-serif;
+    }
+    .entry button:hover{ background: color-mix(in srgb, var(--fg) 16%, transparent); }
+
+    /* Lesson pack buttons row (left) + main actions (right) */
+    .row.dual{
+      display:flex;
+      gap:8px;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:nowrap;
+    }
+        .lesson-buttons{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      flex-wrap:wrap;
+      overflow-x:visible;
+      max-width:100%;
+    }
+    .lesson-buttons::-webkit-scrollbar{ height:8px; }
+    .lesson-buttons::-webkit-scrollbar-thumb{
+      background: color-mix(in srgb, var(--fg) 22%, transparent);
+      border-radius:999px;
+    }
+    .lesson-buttons::-webkit-scrollbar-track{
+      background: color-mix(in srgb, var(--fg) 6%, transparent);
+      border-radius:999px;
+    }
+    .main-buttons{
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      align-items:center;
+      flex-wrap:nowrap;
+      white-space:nowrap;
+    }
+
+
+    .settings{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px 14px;
+      align-items:end;
+      justify-content:space-between;
+      margin:8px 0 0;
+      padding-top:10px;
+      border-top:1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+    }
+    .setting{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+      font-size:12.5px;
+      color:var(--muted);
+    }
+    .setting input[type="color"]{
+      width:36px; height:26px;
+      border-radius:6px;
+      border:1px solid rgba(255,255,255,.18);
+      background:transparent;
+      padding:0;
+      cursor:pointer;
+    }
+    .setting input[type="range"]{ width:170px; cursor:pointer; }
+    .setting .val{
+      min-width:42px; text-align:right;
+      color:var(--fg);
+      font-family:Consolas,"Lucida Console","Courier New",monospace;
+    }
+
+    .help{
+      margin-top:10px;
+      color:rgba(255,255,255,.65);
+      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+      font-size:12px;
+      text-align:center;
+    }
+    .kbd{
+      display:inline-block;
+      padding:1px 6px;
+      border-radius:4px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      font-family:inherit;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="window">
+    <div class="titlebar">
+      <div class="title-left">
+        <div class="icon"></div>
+        <div>Touch Typing Home Row Speed Grinder 2.0</div>
+      </div>
+      <div class="win-controls">
+        <div class="btn" title="Minimize"></div>
+        <div class="btn" title="Maximize"></div>
+        <div class="btn close" title="Close"></div>
+      </div>
+    </div>
+
+    <div id="prompt" tabindex="0" aria-label="Typing area">
+      <div class="line">Microsoft Windows [Version 6.1.7601]</div>
+      <div class="line">(c) 2009 Microsoft Corporation. All rights reserved.</div>
+      <div class="line"> </div>
+
+      <div class="line muted">Select a Lesson Pack, then click Load Data to Begin, type each data entry, and press space until the pack is finished.</div>
+      <div class="line muted">Example: fl-ower mo-tion</div>
+      <div class="line muted">Type highlighted motion(s). Finish data, then press Space for next data. Backspace allowed (not encouraged).</div>
+      <div class="line muted">Tip: press <span class="kbd">Home</span> to restart the current test and reset counters. F11 Toggles Fullscreen.</div>
+
+      <div class="entry" id="entryBox">
+        <label for="phraseInput">Data input</label>
+        <textarea id="phraseInput" spellcheck="false" placeholder="e.g. fl-ower mo-tion"></textarea>
+
+        <div class="row dual">
+          <div class="lesson-buttons" aria-label="Lesson packs">
+            <button id="lesson1m" type="button">1 Motion</button>
+            <button id="lesson2m" type="button">2 Motion</button>
+            <button id="lesson3m" type="button">3 Motion</button>
+            <button id="lesson4m" type="button">4 Motion</button>
+            <button id="lesson5m" type="button">5 Motion</button>
+            <button id="lesson6m" type="button">6 Motion</button>
+            <button id="lessonNumbers" type="button">Numbers</button>
+            <button id="lessonOfficialSyllables" type="button">Official Syllables</button>
+            <button id="lessonCustomSyllables" type="button">Custom Syllables</button>
+            <button id="lessonNames" type="button">Names</button>
+            <button id="lessonRandomCaps" type="button">Random Small Capitalization</button>
+            <button id="contactMeBtn" type="button">Contact Me</button>
+          </div>
+
+          <div class="main-buttons">
+            <button id="loadBtn" type="button">Load data</button>
+            <button id="loadCodeBtn" type="button">Load code</button>
+            <button id="resetBtn" type="button">Reset counters</button>
+          </div>
+        </div>
+
+        <div class="settings" aria-label="Display settings">
+          <div class="setting">
+            <span>Text</span>
+            <input id="fgPicker" type="color" value="#21ff21" aria-label="Text color" />
+          </div>
+          <div class="setting">
+            <span>Background</span>
+            <input id="bgPicker" type="color" value="#000000" aria-label="Background color" />
+          </div>
+          <div class="setting">
+            <span>Text size</span>
+            <input id="sizeSlider" type="range" min="12" max="28" step="1" value="16" aria-label="Text size" />
+            <span class="val" id="sizeVal">16px</span>
+          </div>
+          <div class="setting">
+            <button id="defaultThemeBtn" type="button">Defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress bar right above prompt line -->
+      <div class="progress-wrap" id="progressWrap" aria-label="Test progress">
+        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-pct" id="progressPct">0%</div>
+      </div>
+
+      <div class="line" id="display"></div>
+      <div class="line" id="inputLine">C:\Users\Trainee&gt; <span id="typed"></span><span class="cursor"></span></div>
+
+      <div class="status">
+        <div id="status1"></div>
+        <div class="right">
+          <div id="rollover"></div>
+          <div id="errors"></div>
+          <div id="wpm"></div>
+          <div id="acc"></div>
+        </div>
+        <div id="status2" style="grid-column: 1 / -1;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="help">
+    Tip: click the “console” and type. Use <span class="kbd">Space</span> to advance data.
+  </div>
+
+  <script>
+    // ====== Theme / accessibility controls ======
+    const fgPicker = document.getElementById("fgPicker");
+    const bgPicker = document.getElementById("bgPicker");
+    const sizeSlider = document.getElementById("sizeSlider");
+    const sizeVal = document.getElementById("sizeVal");
+    const defaultThemeBtn = document.getElementById("defaultThemeBtn");
+
+    function hexToRgb(hex) {
+      const h = (hex || "").replace("#", "").trim();
+      if (h.length !== 6) return { r: 33, g: 255, b: 33 };
+      const n = parseInt(h, 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+
+    function applyTheme({ fg, bg, size }) {
+      document.documentElement.style.setProperty("--fg", fg);
+      document.documentElement.style.setProperty("--bg", bg);
+      document.documentElement.style.setProperty("--fontSize", `${size}px`);
+
+      const rgb = hexToRgb(fg);
+      document.documentElement.style.setProperty("--muted", `rgba(${rgb.r},${rgb.g},${rgb.b},.55)`);
+
+      sizeVal.textContent = `${size}px`;
+
+      try {
+        localStorage.setItem("tt_fg", fg);
+        localStorage.setItem("tt_bg", bg);
+        localStorage.setItem("tt_size", String(size));
+      } catch {}
+    }
+
+    function loadThemeFromStorage() {
+      try {
+        const fg = localStorage.getItem("tt_fg") || "#21ff21";
+        const bg = localStorage.getItem("tt_bg") || "#000000";
+        const size = parseInt(localStorage.getItem("tt_size") || "16", 10);
+
+        fgPicker.value = fg;
+        bgPicker.value = bg;
+        sizeSlider.value = String(Math.min(28, Math.max(12, isNaN(size) ? 16 : size)));
+
+        applyTheme({ fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10) });
+      } catch {
+        applyTheme({ fg: "#21ff21", bg: "#000000", size: 16 });
+      }
+    }
+
+    fgPicker.addEventListener("input", () => applyTheme({
+      fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10)
+    }));
+    bgPicker.addEventListener("input", () => applyTheme({
+      fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10)
+    }));
+    sizeSlider.addEventListener("input", () => applyTheme({
+      fg: fgPicker.value, bg: bgPicker.value, size: parseInt(sizeSlider.value, 10)
+    }));
+    defaultThemeBtn.addEventListener("click", () => {
+      fgPicker.value = "#21ff21";
+      bgPicker.value = "#000000";
+      sizeSlider.value = "16";
+      applyTheme({ fg: "#21ff21", bg: "#000000", size: 16 });
+    });
+
+    // ====== Trainer state ======
+    let words = [];
+    let syllables = [];
+    let wordIndex = 0;
+    let syllIndex = 0;
+
+    // current syllable input buffer
+    let buffer = "";
+    // becomes true after last syllable is completed; then Space is required
+    let wordReadyForSpace = false;
+
+    let testCompleted = false;
+
+    // Input mode: false = guided (hyphens are guides), true = raw code (type exactly as shown)
+    let rawInputMode = false;
+
+    // Key rollover tracking
+    const keysDown = new Set();
+    let rolloverCount = 0;
+    let inRollover = false;
+
+    // Errors / accuracy
+    let errorCount = 0;
+    let totalTypedChars = 0;
+    let correctTypedChars = 0;
+
+    // WPM
+    let sessionStartMs = null;
+    let wpmTimer = null;
+    let latestWpm = 0;
+
+    // Track "problem keys" (keys involved in mistakes)
+    const problemKeys = new Map(); // key -> count
+
+    const WINDOW_SIZE = 5;
+
+    // ====== Elements ======
+    const promptEl = document.getElementById("prompt");
+    const phraseInputEl = document.getElementById("phraseInput");
+    const loadBtn = document.getElementById("loadBtn");
+
+    // ====== Lesson pack buttons (stubs for now) ======
+    const CONTACT_ME_URL = "https://discordapp.com/invite/qUymDuc";
+
+    const LESSON_PACKS = {
+"1 Motion": `job
+no
+times
+real
+share
+bond
+bank
+files
+build
+final
+know
+let
+point
+sand
+shop
+past
+value
+tax
+one
+plans
+least
+more
+at
+pc
+user
+few
+rose
+use
+has
+us
+this
+camp
+car
+air
+fiscal
+stock
+ton
+it
+his
+this
+up
+who
+not
+ms.
+mrs.
+mr.
+senior
+team
+hate
+so
+one
+most
+least
+best
+years
+single
+with
+bonds
+simple
+points
+can
+while
+actions
+now
+said
+an
+yet
+bin
+war
+use
+last
+time
+in
+today
+says
+size
+half
+to
+with
+bonds
+simple
+coin
+can
+while
+actions
+now
+said
+and
+type
+by
+he
+it's
+into
+if
+as
+in
+taxi
+cab
+cap
+hat
+hit
+shot
+jobs
+same
+one
+two
+sin
+map
+nap
+cash
+slave
+claims
+or
+is
+some
+two
+out
+racism
+file
+easy
+hard
+word
+public
+at
+new
+of
+power
+are
+we
+down
+be
+taken
+rules
+new
+tail
+body
+ways
+it
+up
+who
+york
+work
+how
+each
+way
+while
+sent
+don't
+lan
+false
+she
+own
+what
+course
+white
+jog
+walk
+mock
+hawk
+super
+take
+talks
+corp
+weigh
+corpse
+make
+rule
+net
+display
+do
+we
+plant
+our
+sale
+one
+early
+can't
+days
+key
+want
+base
+ago
+city
+life
+live
+list
+mac
+go
+went
+nite
+day
+help
+open
+cost
+as
+dos
+heal
+miles
+cut
+put
+best
+able
+came
+paid
+me
+bud
+gas
+gay
+lay
+hip
+ten
+tip
+list
+lines
+top
+city
+already
+late
+ram
+isn't
+able
+law
+take
+won
+cars
+pay
+board
+near
+black
+toward
+makes
+lead
+rise
+seal
+sharp
+gone
+won't
+hard
+next
+move
+some
+task
+date
+find
+makes
+lead
+rise
+seal
+sharpie
+zone
+won't
+hard
+next
+move
+some
+tax
+date
+find
+makes
+hack
+vamp
+gain
+owe
+i'm
+reason
+fine
+bad
+evil
+stalk
+doing
+game
+sniper
+play
+win
+view
+bid
+wants
+card
+poke`,
+      "2 Motion": `custo-mers
+so-ld
+earni-ngs
+te-xt
+pric-e
+mai-n
+resul-ts
+othe-rs
+jap-an
+ag-ain
+bu-y 
+bel-ow 
+nev-er 
+k-ind 
+ha-nd 
+cha-nges
+racis-t
+ord-er
+ap-proach
+estima-te
+ja-mes
+com-e
+know-n
+hea-d
+sy-stem
+whet-her
+sev-en
+tues-day
+comp-are
+l-oca-l
+sim-ilar
+be-gan
+fa-r
+c-ents
+fi-re
+gi-ve
+fal-l
+lat-er
+howev-er 
+with-in
+admi-n
+the-re
+les-s
+ra-tes
+to-o
+some-one
+the-se
+stud-y
+cal-l
+we-eks
+europ-ean
+smal-l
+stand-ard
+lit-tle
+f-riday
+lar-ge
+cos-ts
+thi-nk
+l-ong
+respon-se
+calif-ornia
+texa-s
+vac-ations
+arou-nd
+eur-ope
+spe-cial
+pro-blems
+ho-me
+pro-blem
+ho-mie
+hip-pie
+tu-rn
+ni-ne
+aw-ay
+par-ts
+cha-nge
+gen-eral
+com-es
+camp-aign
+of-ten
+fl-ower
+bil-l
+yo-u
+say-ing
+to-tal
+opera-tions
+hav-e
+ga-ve
+wer-e
+earli-er
+lat-est
+va-rious
+tha-n
+da-ta
+vo-te
+bu-t
+cl-ear
+era-se
+u-ndo
+fo-r
+peo-ple
+dru-g
+thei-r
+acros-s
+are-as
+wil-l
+ap-ple
+ke-ep
+suc-h
+f-rom
+natio-n's
+the-y
+al-l
+as-set
+incl-ine
+eith-er
+eigh-t
+tha-t
+bi-g
+actin-g
+proje-ct
+an-alyst
+wat-er
+an-alystic
+the-m
+ma-y
+othe-r
+ov-er
+yo-u
+whe-n
+wa-s
+maste-r
+met-hod
+on-ly
+capit-al
+he-y
+ma-n
+inc-ome
+fiel-d
+nor-th
+se-cond
+pla-n
+wou-ld
+alm-ost
+fo-rm
+abil-ity
+sev-en
+sup-ply
+separ-ate
+requi-re
+l-ost
+char-ges
+als-o
+cou-ld
+abou-t
+an-y
+t-rue
+sy-stem
+be-en
+ranc-h
+alwa-ys
+whi-ch
+hav-e
+mar-ch
+n-ame
+do-esn't
+work-ing
+sta-tes
+tha-n
+dat-a
+fo-r
+peo-ple
+bo-ok
+sout-h
+calif-ornia
+who's
+of-f
+fu-nds
+fou-r
+bei-ng
+sev-eral
+typ-ing
+who-se
+th-rough
+lev-els
+whe-re
+thi-rd
+ve-ry
+ag-ainst
+li-ke
+ligh-t
+mak-ing
+par-t
+hig-h
+share-s
+sinc-e
+opti-ons
+dur-ing
+ev-ery
+cl-ose
+ran-ge
+cor-e
+fac-e
+lev-el
+pack-age
+al-ong
+d-eath
+ma-y
+work-ers
+the-n
+ma-jor
+se-en
+le-d
+outp-ut
+pres-s
+inp-ut
+ameri-can
+healt-h
+so-on
+stand-ards
+tha-t's
+ho-urs
+nearl-y
+sale-s
+se-ems
+o-ld
+fo-od
+al-ong
+g-raphics
+questio-ns
+stud-ents
+par-ty
+yel-l
+lead-ing
+infla-tion
+wante-d
+sena-te
+usi-ng
+stil-l
+be-gin
+j-ust
+ner-d
+ge-ek
+itsel-f
+poten-tial
+use-d
+lang-uage
+qual-ity
+reli-gious
+tak-ing
+use-s
+al-l
+ev-en
+tes-t
+famil-y
+wor-ld
+fi-rm
+bo-th
+l-ose
+stalk-er
+ve-rsion
+natio-nal
+vid-eo
+ra-te
+to-ok
+scr-eam
+davi-d
+u-ntil
+windo-w
+last-ing
+dis-k
+hig-her
+ru-n
+resul-ts
+oi-l
+base-d
+bus-h
+re-view
+oth-er
+ev-er
+ro-le
+goi-ng
+ho-ld
+fou-nd
+are-a
+sovie-t
+m-y
+c-ent
+with-out
+di-d
+new-s
+to-ok
+stoc-ks 
+sel-l
+du-e
+stalk-ing
+u-nix
+char-ge
+to-ld
+rac-ing
+do-es
+pou-nds
+ap-proach
+sho-wn
+estim-ates
+cou-nt
+sho-w
+shor-t
+perio-d
+go-t
+vampi-re
+natio-nal
+cas-e
+l-ow
+se-e
+onc-e
+pa-per
+chi-ef
+ra-tes
+par-ty
+aug-ust
+amo-ng
+go-od
+fel-l
+mod-els
+ho-use
+beh-ind
+wh-y
+imag-e
+pres-ent
+ye-n
+ve-rsion
+natio-nalist
+whet-her
+cha-nge
+is-sue
+blad-e
+satu-rday
+gen-eral
+pos-sible
+sta-tes
+gam-ing
+boa-rd
+hack-er
+snip-ing
+hack-ing
+hack-able
+cour-t
+l-ower
+mil-itary
+me-et
+si-x
+seri-es
+real-ly
+g-rowth
+build-ing
+cal-ls
+don-e
+dri-ve
+we-st
+h-ouse
+can-not
+outsid-e
+pic-k
+her-e
+u-nit
+ba-t
+en-d
+produ-ction
+comp-ute
+dul-l
+abo-ve
+t-erms
+wome-n
+d-esign
+woma-n
+beau-ty
+pre-vious
+exist-ing
+prin-t
+lef-t
+si-x
+fi-ve
+whe-n
+exampl-e
+tes-t
+netwo-rk
+mea-ns
+hel-d
+pa-per
+mod-el
+gi-ven
+sid-e
+ful-l
+cas-es
+kn-ife
+sy-stem
+mark-ets
+havi-ng
+readin-g
+vic-e
+u-nits
+posit-ion
+scal-e
+li-kely
+plac-e
+l-ot
+cit-y
+ind-ex
+fo-rk
+list-ing
+di-dn't
+excha-nge
+fac-t
+l-ot
+ind-ex
+be-neath
+l-ost
+sta-r
+sto-ry
+na-me
+mis-sion
+buil-t
+kn-it
+nig-ht
+persona-l
+pres-sure
+ga-ge
+meas-ure
+texa-s g-roups
+band-age
+t-rial
+compl-ex
+file-d`,
+      "3 Motion": `f-re-e
+ag-enc-y
+micro-sof-t
+st-ron-g
+re-cor-d
+l-o-ok
+ra-the-r
+si-d-e
+ma-n-y
+pro-pose-d
+l-ond-on
+const-ruc-t
+beli-ev-e
+amo-u-nt
+alth-oug-h
+c-er-tain
+st-re-et
+inte-rnatio-nal
+of-fic-e
+ap-plicat-ions
+fo-rei-gn
+t-rad-e
+se-curi-ty
+opera-tin-g
+kn-igh-t
+re-c-ently
+com-mer-cial
+re-ven-ue
+sto-ra-ge
+proc-es-s
+ac-cord-ing
+cal-le-d
+some-thi-ng
+per-c-ent
+compa-n-y
+af-te-r
+mil-li-on
+inves-tiga-tion
+hel-l-o
+bil-li-on
+com-mis-sion
+an-alysi-s
+sup-por-ts
+di-e-d
+fi-rs-t
+ra-c-e
+co-d-e
+bl-o-od
+cont-in-ue
+tho-ug-h
+ma-n-y
+cou-nt-ries
+sept-emb-er
+g-ra-b
+l-os-s
+pri-va-te
+mac-hi-ne
+spe-cif-ic
+maci-ntos-h
+marke-tin-g
+per-c-ent
+te-ch-nical
+mac-hi-nes
+presi-d-ent
+fin-anci-al
+bo-rin-g`,
+      "4 Motion": `go-vern-me-nt
+conf-er-enc-e
+auto-bio-g-raphy
+dif-fe-ren-t
+pro-c-es-sor
+of-fe-re-d
+d-ef-ens-e
+as-soc-iat-ion
+fe-b-rua-ry
+rel-eas-e-d
+dist-ri-bu-tion
+ha-u-nte-d
+hal-l-owe-en
+inte-r-fac-e
+do-cu-me-nt
+qu-ar-te-r
+ma-nage-me-nt
+repo-r-te-d
+l-o-ok-ing
+we-dn-es-day
+sta-r-te-d
+n-u-mb-ers
+ag-re-em-ent
+d-emo-cra-tic
+be-t-te-r
+dis-cus-se-d
+of-fe-rin-g
+st-ruc-tu-res
+ad-d-e-d
+d-e-cis-ion
+inte-r-fac-e
+ex-e-cuti-ves
+pres-ent-e-d
+ne-c-es-sary
+ad-dr-es-s
+g-re-etin-gs
+l-os-se-s
+meas-ure-me-nt
+al-tho-ug-h
+fo-l-l-owing
+ge-t-tin-g
+u-nive-rsi-ty
+st-ruc-tu-re
+busi-nes-se-s
+ru-n-ni-ng
+ag-re-e-d
+pro-c-es-s
+re-du-c-e
+conti-n-ue-d
+com-mit-te-e
+d-e-b-t
+pri-c-e-d
+ef-fo-r-ts
+d-esign-e-d
+ro-be-r-t
+en-d-e-d
+cap-abil-it-ies
+nig-ht-cor-e
+envi-ron-me-nt
+ef-fo-r-t
+ja-n-uar-y
+ef-fo-r-t
+ja-n-uar-y
+ef-fo-r-ts
+ap-ar-tme-nt
+rea-ch-e-d
+st-rat-egy
+cre-ate-d
+go-vern-or
+sc-re-en`,
+      "5 Motion": `exp-e-ct-e-d
+te-ch-no-l-ogy
+ne-e-d-e-d
+re-c-eiv-e-d
+d-esc-ri-be-d
+com-m-u-nicat-ions
+sch-e-dul-e-d
+d-e-c-emb-er
+pro-g-ram-mi-ng
+consi-d-er-e-d
+d-e-clin-e-d
+admi-nist-ra-to-r
+d-ev-el-opm-ent
+d-epar-t-me-nt`,
+      "6 Motion": `d-e-ci-d-e-d
+an-no-u-nc-e-d`,
+      "Numbers": `1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+29
+38
+47
+56
+65
+74
+83
+92
+01
+14
+17
+25
+28
+36
+39
+90
+80
+70
+60
+50
+40
+30
+20
+10
+5-4
+4-5
+6-7
+7-6`,
+      "Official Syllables": `ac-e
+ad-e
+age
+aid
+ail
+ain
+alse
+aint
+ait
+ake
+ale
+ame
+ane
+ange
+aste
+ate
+ave
+ay
+a-ze
+eak
+eigh
+ey
+ea
+each
+ead
+eak
+eal
+eam
+ean
+eap
+ear
+eas-e
+east
+eat
+eath
+eav-e
+e-e-ch
+e-ek
+e-el
+e-em
+e-en
+e-ep
+e-er
+ie-c-e
+ief
+iel-d
+ibe
+ic-e
+ie
+ie-d
+ier
+ies
+ife
+igh
+igh-t
+i-ke
+ild
+ile
+ime
+ind
+ine
+ipe
+ire
+ise
+ite
+ive
+u-y
+ly
+ry
+ye
+oach
+oad
+oak
+oa-l
+oam
+oan
+oast
+oat
+obe
+od-e
+oe
+oke
+o-ld
+o-le
+ome
+one
+ope
+ose
+ost
+ote
+ove
+ow
+own
+ab
+ack
+act
+ad
+af-t
+ag
+am
+amp
+an
+anc-e
+anc-h
+and
+ang
+ank
+ant
+ap
+ash
+ask
+asm
+asp
+ast
+at
+atch
+ath
+ax
+ea-d
+ealth
+eath
+e-ck
+e-d
+e-dg-e
+ef-t
+eg 
+el-d
+el-l
+elp
+elt
+em
+en
+en-c-e
+en-ch
+end
+eng-th
+ens-e
+ent
+ep
+ept
+esh
+es-s
+est
+et
+et-ch
+ext
+ib
+ic-k
+id
+if-f
+if-t
+ig
+il-k
+if-f
+if-t
+ig
+il-k
+il-l
+ilt
+im
+imp
+in
+inc-e
+inc-h
+ing
+inge
+in-k
+int
+ip
+is
+ish
+is-k
+isp
+is-s
+ist
+it
+itch
+ive
+ix
+ive
+ob
+ock
+od
+of-t
+og
+omp
+ond
+op
+ot
+otch
+oug-h
+ox
+ome
+on
+ove
+ub
+uc-h
+uck
+ud
+udg-e
+uf-f
+ug
+ulk
+ul-l
+u-m
+u-mb
+u-mp
+u-n
+u-nc-h
+u-ng
+u-nk
+u-nt
+up
+us
+us-h
+ust
+ut
+utc-h
+ut-t
+air
+are
+ear
+earn
+er-b
+er-ge
+erkk
+erm
+ern
+er-ve
+ir
+ird
+irk
+irl
+irs-t
+ir-t
+ir-th
+ur
+ur-b
+ur-ge
+url
+ur-n
+urk
+urse
+ur-t
+ar
+ard
+ar-ge
+ark
+arm
+arn
+arp
+ar-t
+al-l
+alk
+alt
+aug-ht
+au-nc-h
+au-nt
+ault
+aw
+awl
+awn
+ong
+os-s
+ost
+oth
+oug-ht
+oar
+o-or
+orch
+ord
+ore
+ork
+orm
+orn`,
+      "Custom Syllables": `ic-k
+ea
+irl
+oi-l
+ar
+ou
+or
+ai
+er
+oy
+ay
+oa
+ur
+igh
+ow
+le
+ure
+psy
+iu-m
+ens
+ent
+tion
+me-nt
+inc
+anc
+ank
+ent
+aug
+oug
+anc
+cial
+cian
+adg
+odg
+elm
+elp
+tal
+ien
+ly
+ien
+itch
+ious
+ing
+sho
+shi
+sha
+cho
+chi
+cha
+tha
+tho
+thi
+kno
+pho
+pha
+phi
+kne
+wha
+whe
+who
+esk
+ask
+sta
+sti
+sto
+sta
+ste
+ake
+ack
+ock
+last
+est`,
+      "Names": `laim
+noa-h
+wil-liam
+ja-mes
+o-live-r
+ben-ja-mi-n
+elija-h
+lucas
+maso-n
+l-ogan
+alex-and-er
+etha-n
+jacob
+mic-hael
+dani-el
+he-nr-y
+jackso-n
+seba-stian
+aid-en
+mat-thew
+sam-uel
+davi-d
+josep-h
+car-te-r
+owen
+wyat-t
+jo-h-n
+jack
+luke
+ja-yd-en
+dyla-n
+g-rayso-n
+levi
+isa-ac
+ga-b-riel
+j-ulia-n
+mate-c
+ant-ho-n-y
+jaxo-n
+linc-o-ln
+jos-h-ua
+chris-tophe-r
+andr-ew
+theo-dor-e
+caleb
+ryan
+asher
+nat-han
+tho-mas
+le-o
+isa-iah
+charl-es
+josia-h
+h-udso-n
+chris-tian
+h-u-nte-r
+con-nor
+eli
+ezra
+a-aron
+land-on
+ad-rian
+jo-nat-ha-n
+no-lan
+jer-emia-h
+easton
+elias
+co-lt-on
+cam-eron
+carson
+ro-be-r-t
+angel
+mave-rick
+nic-ho-las
+domi-nic
+jax-son 
+g-reyso-n
+ad-am
+ian
+austi-n
+sant-iago
+jord-an
+co-oper
+b-ray-d-en
+roma-n
+evan`,
+      "Random Small Capitalization": `Monday morning routine
+coffee Break early
+quiet town Paris
+Texas highway drive
+small town Ohio
+early morning Monday
+river flows Mississippi
+simple meal Breakfast
+family dinner Sunday
+office work Microsoft
+morning train Station
+coffee shop Starbucks
+late night Friday
+friendly neighbor John
+busy street Broadway
+mountain range Rockies
+holiday travel Christmas
+movie night Netflix
+weekly meeting Tuesday
+evening service Church
+local school District
+quiet reading Library
+family visit Grandma
+airport security line
+daily workout Gym
+closing time Walmart
+morning alarm Clock
+early flight Airport
+late shift Hospital
+long drive Highway
+Chicago winter weather
+Google search results
+Amazon delivery truck
+Facebook account settings
+Windows system update
+Calendar reminder alert
+District school policy
+Station train platform
+Mississippi river flood
+Rockies mountain trail
+coffee Starbucks order
+quiet Paris street
+small Texas town
+early Monday morning
+river Mississippi flows
+late Friday night
+mountain Rockies trail
+family Christmas dinner
+movie Netflix night
+office Microsoft work
+busy Broadway street
+holiday Sunday afternoon
+local District meeting
+evening Church service
+friendly John neighbor
+morning Airport security
+daily Walmart shopping
+quiet Library reading
+weekly Tuesday schedule
+simple Breakfast meal`
+    };
+
+    function loadLessonPack(label) {
+      const pack = (LESSON_PACKS[label] || "").trim();
+      if (pack) {
+        phraseInputEl.value = pack;
+      } else {
+        phraseInputEl.value =
+`# ${label} — lesson pack not loaded yet
+# Paste your ${label} data here later, then we'll wire it into this button.
+`;
+      }
+      // Keep the user in the Data input box after clicking a lesson button
+      phraseInputEl.focus();
+      phraseInputEl.setSelectionRange(phraseInputEl.value.length, phraseInputEl.value.length);
+    }
+
+    const loadCodeBtn = document.getElementById("loadCodeBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const displayEl = document.getElementById("display");
+    const typedEl = document.getElementById("typed");
+    const status1El = document.getElementById("status1");
+    const status2El = document.getElementById("status2");
+    const rolloverEl = document.getElementById("rollover");
+    const errorsEl = document.getElementById("errors");
+    const wpmEl = document.getElementById("wpm");
+    const accEl = document.getElementById("acc");
+
+    const progressFillEl = document.getElementById("progressFill");
+    const progressPctEl = document.getElementById("progressPct");
+    const progressBarEl = document.querySelector(".progress-bar");
+
+    // ====== Helpers ======
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+    }
+
+    function jarScreen() {
+      promptEl.classList.remove("shake");
+      void promptEl.offsetWidth;
+      promptEl.classList.add("shake");
+    }
+
+    function prettyKeyName(key) {
+      if (!key) return "";
+      if (key === " ") return "Space";
+      if (key === "Backspace") return "Backspace";
+      return key;
+    }
+
+    function recordProblemKey(key) {
+      const k = prettyKeyName(key);
+      if (!k) return;
+      problemKeys.set(k, (problemKeys.get(k) || 0) + 1);
+    }
+
+    function ensureSessionStarted() {
+      if (testCompleted) return;
+      if (sessionStartMs !== null) return;
+      sessionStartMs = Date.now();
+      wpmTimer = setInterval(() => {
+        if (testCompleted) return;
+        const elapsedMin = Math.max((Date.now() - sessionStartMs) / 60000, 1e-9);
+        latestWpm = Math.round((correctTypedChars / 5) / elapsedMin);
+        render();
+      }, 5000);
+    }
+
+    function stopSessionTimer() {
+      if (wpmTimer) clearInterval(wpmTimer);
+      wpmTimer = null;
+      sessionStartMs = null;
+    }
+
+    function normalizeWordsInput(input) {
+      const cleaned = (input || "").trim().replace(/\s+/g, " ");
+      if (!cleaned) return "";
+      return cleaned.split(" ").map(w => {
+        let x = w.replace(/-+/g, "-");
+        x = x.replace(/^-+/, "").replace(/-+$/, "");
+        return x;
+      }).filter(Boolean).join(" ");
+    }
+
+    function resetCountersOnly() {
+      rolloverCount = 0;
+      errorCount = 0;
+      totalTypedChars = 0;
+      correctTypedChars = 0;
+
+      problemKeys.clear();
+
+      stopSessionTimer();
+      latestWpm = 0;
+
+      testCompleted = false;
+      inRollover = (keysDown.size >= 2);
+    }
+
+    function parseWords(input, { resetCounters, raw } = { resetCounters: true, raw: false }) {
+      rawInputMode = !!raw;
+
+      if (rawInputMode) {
+        // Raw mode: treat input as literal tokens separated by whitespace.
+        // The user must type hyphens/punctuation exactly as displayed.
+        const tokens = (input || "").trim().split(/\s+/).filter(Boolean);
+        words = tokens;
+        syllables = words.map(w => [w]); // single "motion" per token
+      } else {
+        // Guided mode: hyphens are guides; user types letters only.
+        const cleaned = normalizeWordsInput(input);
+        words = cleaned.length ? cleaned.split(" ") : [];
+        syllables = words.map(w => w.split("-").filter(Boolean));
+      }
+
+      wordIndex = 0;
+      syllIndex = 0;
+      buffer = "";
+      wordReadyForSpace = false;
+      testCompleted = false;
+
+      stopSessionTimer();
+      latestWpm = 0;
+
+      if (resetCounters) resetCountersOnly();
+
+      render();
+    }
+
+    function restartCurrentTestAndResetCounters() {
+      // Restart using the current textarea value, preserving the last load mode.
+      resetCountersOnly();
+      parseWords(phraseInputEl.value, { resetCounters: false, raw: rawInputMode });
+    }
+
+    function currentTargetSyllable() {
+      return (syllables[wordIndex] && syllables[wordIndex][syllIndex]) ? syllables[wordIndex][syllIndex] : "";
+    }
+
+    function isPrintableKey(e) {
+      return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+    }
+
+    function countRolloverOnCorrectEntryIfNeeded() {
+      // "only count correct entries"
+      if (keysDown.size >= 2 && !inRollover) {
+        rolloverCount++;
+        inRollover = true;
+      }
+    }
+
+    function incErrorAndReset(problemKey = null) {
+      errorCount++;
+      if (problemKey) recordProblemKey(problemKey);
+      jarScreen();
+
+      buffer = "";
+      // On error: reset current data to start
+      syllIndex = 0;
+      wordReadyForSpace = false;
+
+      inRollover = (keysDown.size >= 2);
+
+      render();
+    }
+
+    function advanceSyllableOrArmSpace() {
+      buffer = "";
+      const sylCount = (syllables[wordIndex] || []).length;
+      if (syllIndex < sylCount - 1) {
+        syllIndex++;
+      } else {
+        // finished last syllable
+        wordReadyForSpace = true;
+      }
+      render();
+    }
+
+    function getProblemKeysSummary() {
+      if (problemKeys.size === 0) return "No problem keys detected.";
+      const items = Array.from(problemKeys.entries())
+        .sort((a,b) => b[1]-a[1])
+        .slice(0, 12)
+        .map(([k,v]) => `${k}(${v})`);
+      return `Problem keys: ${items.join("  ")}`;
+    }
+
+    function completeTest() {
+      testCompleted = true;
+
+      if (sessionStartMs !== null) {
+        const elapsedMin = Math.max((Date.now() - sessionStartMs) / 60000, 1e-9);
+        latestWpm = Math.round((correctTypedChars / 5) / elapsedMin);
+      }
+      stopSessionTimer();
+
+      render(true);
+    }
+
+    function advanceWord() {
+      wordIndex++;
+      syllIndex = 0;
+      buffer = "";
+      wordReadyForSpace = false;
+
+      if (wordIndex >= words.length) {
+        completeTest();
+        return;
+      }
+      render();
+    }
+
+    function accuracyPercent() {
+      if (totalTypedChars <= 0) return 100;
+      return Math.round((correctTypedChars / totalTypedChars) * 100);
+    }
+
+    function testPercentComplete() {
+      if (!words.length) return 0;
+      const completed = Math.min(wordIndex, words.length);
+      return Math.round((completed / words.length) * 100);
+    }
+
+    function renderWordsWindow() {
+      const start = wordIndex;
+      const end = Math.min(words.length, start + WINDOW_SIZE);
+      const slice = words.slice(start, end);
+
+      return slice.map((w, i) => {
+        const absIndex = start + i;
+        const isActive = absIndex === wordIndex;
+
+        if (!isActive) {
+          return `<span class="word">${escapeHtml(w)}</span>`;
+        }
+
+        // Active item rendering differs by mode.
+        if (rawInputMode) {
+          // Raw mode: show the token exactly as typed (including hyphens/punctuation), highlight the whole token.
+          return `<span class="word active"><span class="syll active">${escapeHtml(w)}</span></span>`;
+        }
+
+        // Guided mode: hyphens are guides; highlight the current motion chunk.
+        const parts = w.split("-");
+        return `<span class="word active">${parts.map((p, si2) => {
+          const cls = (si2 === syllIndex) ? "syll active" : "syll";
+          return `<span class="${cls}">${escapeHtml(p)}</span>`;
+        }).join('<span class="hyph">-</span>')}</span>`;
+      }).join("");
+    }
+
+    function render(completedView = false) {
+      const pct = completedView ? 100 : testPercentComplete();
+      progressFillEl.style.width = `${pct}%`;
+      progressPctEl.textContent = `${pct}%`;
+      progressBarEl.setAttribute("aria-valuenow", String(pct));
+
+      rolloverEl.textContent = `Key Rollover: ${rolloverCount}`;
+      errorsEl.textContent = `Errors: ${errorCount}`;
+      wpmEl.textContent = `WPM: ${latestWpm}`;
+      accEl.textContent = `Accuracy: ${accuracyPercent()}%`;
+
+      if (!words.length) {
+        displayEl.innerHTML = `C:\\Typing\\Trainer&gt; <span class="muted">No data loaded. Enter some above and click "Load data".</span>`;
+        typedEl.textContent = "";
+        status1El.textContent = "";
+        status2El.textContent = "";
+        return;
+      }
+
+      if (completedView) {
+        displayEl.innerHTML = `C:\\Typing\\Trainer&gt; <span class="muted">Done.</span>`;
+        typedEl.textContent = "";
+        status1El.textContent = `Complete`;
+        status2El.textContent =
+          `✅ All data complete. WPM stopped. Press Home to restart current test.\n${getProblemKeysSummary()}`;
+        return;
+      }
+
+      displayEl.innerHTML = `C:\\Typing\\Trainer&gt; ${renderWordsWindow()}`;
+      typedEl.textContent = buffer;
+
+      const sylCount = (syllables[wordIndex] || []).length;
+      status1El.textContent = `Data ${wordIndex + 1}/${words.length} | Motion ${Math.min(syllIndex + 1, sylCount)}/${sylCount}`;
+
+      const tgt = currentTargetSyllable();
+      const dataTgt = (syllables[wordIndex] || []).join("");
+      const dataSoFar = (syllables[wordIndex] || []).slice(0, syllIndex).join("") + buffer;
+
+      status2El.textContent =
+        wordReadyForSpace
+          ? `Data complete: "${dataTgt}" — press Space to continue`
+          : `Target motion: "${tgt}" | Progress in data: "${dataSoFar}"`;
+    }
+
+    // ====== Button actions ======
+
+    // Lesson pack buttons (currently placeholders)
+    const lessonButtons = [
+      ["lesson1m", "1 Motion"],
+      ["lesson2m", "2 Motion"],
+      ["lesson3m", "3 Motion"],
+      ["lesson4m", "4 Motion"],
+      ["lesson5m", "5 Motion"],
+      ["lesson6m", "6 Motion"],
+      ["lessonNumbers", "Numbers"],
+      ["lessonOfficialSyllables", "Official Syllables"],
+      ["lessonCustomSyllables", "Custom Syllables"],
+      ["lessonNames", "Names"],
+      ["lessonRandomCaps", "Random Small Capitalization"]
+    ];
+
+    const contactMeBtn = document.getElementById("contactMeBtn");
+    if (contactMeBtn) {
+      contactMeBtn.addEventListener("click", () => {
+        window.open(CONTACT_ME_URL, "_blank", "noopener,noreferrer");
+      });
+    }
+
+    lessonButtons.forEach(([id, label]) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener("click", () => loadLessonPack(label));
+    });
+
+
+    loadBtn.addEventListener("click", () => {
+      // Guided mode: hyphens are guides (not typed).
+      resetCountersOnly();
+      parseWords(phraseInputEl.value, { resetCounters: false, raw: false });
+      promptEl.focus();
+    });
+
+    loadCodeBtn.addEventListener("click", () => {
+      // Raw code mode: user types exactly what is shown, including hyphens/punctuation.
+      resetCountersOnly();
+      parseWords(phraseInputEl.value, { resetCounters: false, raw: true });
+      promptEl.focus();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      resetCountersOnly();
+      render();
+      promptEl.focus();
+    });
+
+    // ====== Input handling ======
+    window.addEventListener("keydown", (e) => {
+      if (document.activeElement === phraseInputEl) return;
+      if (e.repeat) return;
+
+      keysDown.add(e.code);
+
+      if (e.key === "Home") {
+        e.preventDefault();
+        // Home resets all counters and restarts current test
+        restartCurrentTestAndResetCounters();
+        return;
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // convenience: Enter loads data too (guided)
+        resetCountersOnly();
+        parseWords(phraseInputEl.value, { resetCounters: false, raw: false });
+        return;
+      }
+
+      if (!words.length) return;
+      if (testCompleted) return;
+
+      // Backspace allowed, jars the screen, not counted as an "error", but is a problem key.
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        jarScreen();
+        recordProblemKey("Backspace");
+        if (buffer.length > 0) {
+          buffer = buffer.slice(0, -1);
+          render();
+        }
+        return;
+      }
+
+      const blocked = ["Delete","ArrowLeft","ArrowRight","End","PageUp","PageDown"];
+      if (blocked.includes(e.key)) {
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key === " " || isPrintableKey(e)) ensureSessionStarted();
+
+      // Space: required ONLY after full data is complete
+      if (e.key === " ") {
+        e.preventDefault();
+
+        // Space+another key pressed at same time should count as rollover (ONLY if accepted/correct)
+        if (wordReadyForSpace) {
+          countRolloverOnCorrectEntryIfNeeded(); // includes Space+other
+          advanceWord();
+        } else {
+          incErrorAndReset("Space");
+        }
+        return;
+      }
+
+      if (!isPrintableKey(e)) return;
+
+      // typing characters
+      totalTypedChars++;
+
+      // if user tries typing when word is already complete (should be space), treat as error
+      if (wordReadyForSpace) {
+        e.preventDefault();
+        incErrorAndReset(e.key);
+        return;
+      }
+
+      const target = currentTargetSyllable();
+      buffer += e.key;
+
+      if (!target.startsWith(buffer)) {
+        e.preventDefault();
+        incErrorAndReset(e.key);
+        return;
+      }
+
+      // accepted correct character
+      correctTypedChars++;
+      countRolloverOnCorrectEntryIfNeeded();
+
+      if (buffer === target) {
+        advanceSyllableOrArmSpace();
+      } else {
+        render();
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keysDown.delete(e.code);
+      if (keysDown.size < 2) inRollover = false;
+    });
+
+    promptEl.addEventListener("animationend", () => promptEl.classList.remove("shake"));
+
+    promptEl.addEventListener("mousedown", (e) => {
+      if (e.target === phraseInputEl || document.getElementById("entryBox").contains(e.target)) return;
+      promptEl.focus();
+    });
+
+    // ====== Start empty + load theme ======
+    loadThemeFromStorage();
+    parseWords("", { resetCounters: true, raw: false });
+    promptEl.focus();
+    render();
+  </script>
+</body>
+</html>
